@@ -1,120 +1,138 @@
-const { Telegraf } = require('telegraf');
-const axios = require('axios');
-const FormData = require('form-data');
+const Telegraf = require('telegraf');
 const fs = require('fs');
+const { createCanvas, loadImage } = require('canvas');
+const ffmpeg = require('fluent-ffmpeg');
+const ProgressBar = require('progress');
 
-// Telegram Bot token
-const botToken = '6701652400:AAGj9Pm6dkfhGVQ42CJR-FqAUlFDzyyiAM4'; // Replace with your Telegram Bot token
-const bot = new Telegraf(botToken);
+const bot = new Telegraf('6701652400:AAFvnBkqFP8WZrPs-hAq73Yd01bIwKjWhcI');
+const usersProgress = {};
 
-// BeDrive access token
-const beDriveAccessToken = '1809|XFSAb8nRAQSz2RcBUva5ptwcpvuHRcavZjLZNr057321c06b'; // Replace with your BeDrive access token
+let watermarkText = 'Default Watermark';
+let watermarkOpacity = 0.5;
 
-// BeDrive API endpoints
-const uploadEndpoint = 'https://bedrive.vebto.com/api/v1/uploads';
-const shareableLinkEndpoint = 'https://bedrive.vebto.com/api/v1/file-entries';
+bot.start((ctx) => ctx.reply('Welcome! Use /help to see available commands.'));
 
-// Enable cancellation of promises
-process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
+bot.help((ctx) => {
+    ctx.reply(
+        'Commands:\n' +
+        '/settext [text] - Set watermark text\n' +
+        '/setopacity [opacity] - Set watermark opacity (0 to 1)\n' +
+        '/status - Check watermark settings\n' +
+        'Send an image or video to add watermark\n'
+    );
+});
 
-// Function to upload file to BeDrive
-async function uploadFileToBeDrive(filePath, fileType) {
-    try {
-        const formData = new FormData();
-        formData.append('file', fs.createReadStream(filePath));
+bot.command('settext', (ctx) => {
+    const text = ctx.message.text.replace('/settext ', '');
+    watermarkText = text;
+    ctx.reply(`Watermark text set to: ${watermarkText}`);
+});
 
-        const config = {
-            headers: {
-                'Authorization': `Bearer ${beDriveAccessToken}`,
-                ...formData.getHeaders()
-            }
-        };
-
-        const response = await axios.post(uploadEndpoint, formData, config);
-        console.log('Upload response:', response.data);
-        return response.data.fileEntry;
-    } catch (error) {
-        console.error(`Error uploading ${fileType} to BeDrive:`, error.response ? error.response.data : error.message);
-        return null;
+bot.command('setopacity', (ctx) => {
+    const opacity = parseFloat(ctx.message.text.replace('/setopacity ', ''));
+    if (isNaN(opacity) || opacity < 0 || opacity > 1) {
+        ctx.reply('Please provide a valid opacity value between 0 and 1.');
+    } else {
+        watermarkOpacity = opacity;
+        ctx.reply(`Watermark opacity set to: ${watermarkOpacity}`);
     }
+});
+
+bot.command('status', (ctx) => {
+    ctx.reply(`Current settings:\nWatermark Text: ${watermarkText}\nWatermark Opacity: ${watermarkOpacity}`);
+});
+
+async function addWatermarkToImage(imagePath, outputFilePath, watermarkText) {
+    const image = await loadImage(imagePath);
+    const canvas = createCanvas(image.width, image.height);
+    const ctx = canvas.getContext('2d');
+
+    ctx.drawImage(image, 0, 0);
+
+    ctx.fillStyle = `rgba(255, 255, 255, ${watermarkOpacity})`;
+    ctx.fillRect(0, canvas.height - 30, canvas.width, 30);
+
+    ctx.fillStyle = 'black';
+    ctx.font = '20px Arial';
+    ctx.fillText(watermarkText, 10, canvas.height - 10);
+
+    const stream = canvas.createJPEGStream({ quality: 0.7 });
+    const out = fs.createWriteStream(outputFilePath);
+    stream.pipe(out);
+    return new Promise((resolve, reject) => {
+        out.on('finish', resolve);
+        out.on('error', reject);
+    });
 }
 
-// Function to generate shareable link for a file entry in BeDrive
-async function generateShareableLink(entryId) {
-    try {
-        const shareLinkResponse = await axios.post(`${shareableLinkEndpoint}/${entryId}/shareable-link`, {
-            password: 'new password', // Replace with your desired password
-            expires_at: null, // Replace with expiry date if needed
-            allow_edit: false,
-            allow_download: true // Modify based on your requirements
-        }, {
-            headers: {
-                'Authorization': `Bearer ${beDriveAccessToken}`,
-                'Content-Type': 'application/json'
-            }
+async function addWatermarkToVideo(videoPath, outputFilePath, watermarkText, ctx) {
+    const videoInfo = await new Promise((resolve, reject) => {
+        ffmpeg.ffprobe(videoPath, (err, metadata) => {
+            if (err) reject(err);
+            else resolve(metadata);
+        });
+    });
+
+    const width = videoInfo.streams[0].width;
+    const height = videoInfo.streams[0].height;
+
+    const watermarkSize = Math.min(width, height) / 20; // Adjust the watermark size dynamically
+
+    const command = ffmpeg(videoPath)
+        .videoCodec('libx264')
+        .inputOptions('-c:v libx264')
+        .outputOptions('-c:v libx264')
+        .on('progress', (progress) => {
+            usersProgress[ctx.chat.id] = progress.percent;
+        })
+        .on('error', (err, stdout, stderr) => {
+            console.error('Error:', err);
+            console.error('ffmpeg stderr:', stderr);
+        })
+        .on('end', () => {
+            ctx.reply('Video processing complete.');
+            delete usersProgress[ctx.chat.id];
         });
 
-        console.log('Shareable link response:', shareLinkResponse.data);
-        return `https://bedrive.vebto.com/drive/s/${shareLinkResponse.data.link.hash}`;
-    } catch (error) {
-        console.error('Error generating shareable link:', error.response ? error.response.data : error.message);
-        return null;
-    }
+    command.complexFilter([
+        `drawtext=text='${watermarkText}':fontsize=${watermarkSize}:fontcolor=white@${watermarkOpacity * 255}:x=(w-text_w)/2:y=(h-text_h)/2:box=1:boxcolor=black@0.5:boxborderw=5`
+    ]);
+
+    command.save(outputFilePath);
 }
 
-// Handle video uploads
-bot.on('video', async (ctx) => {
-    try {
-        const fileId = ctx.message.video.file_id;
-        const filePath = `./${fileId}_${Date.now()}.mp4`;
-        await ctx.telegram.getFileLink(fileId).then((fileLink) => axios({
-            method: 'get',
-            url: fileLink
-        }).then((response) => {
-            fs.writeFileSync(filePath, response.data);
-        }).catch((error) => {
-            console.error('Error downloading file:', error);
-        }));
-
-        const uploadedFileEntry = await uploadFileToBeDrive(filePath, 'video');
-        if (!uploadedFileEntry) throw new Error('Error uploading video to BeDrive.');
-
-        const shareableLink = await generateShareableLink(uploadedFileEntry.id);
-        if (!shareableLink) throw new Error('Error generating shareable link.');
-
-        ctx.reply(`Your video is uploaded!\nHere's the shareable link: ${shareableLink}`);
-    } catch (error) {
-        console.error('Error:', error.message);
-        ctx.reply('Sorry, an error occurred while processing your request.');
-    }
-});
-
-// Handle photo uploads
 bot.on('photo', async (ctx) => {
-    try {
-        const fileId = ctx.message.photo[ctx.message.photo.length - 1].file_id;
-        const filePath = `./${fileId}_${Date.now()}.jpg`;
-        await ctx.telegram.getFileLink(fileId).then((fileLink) => axios({
-            method: 'get',
-            url: fileLink
-        }).then((response) => {
-            fs.writeFileSync(filePath, response.data);
-        }).catch((error) => {
-            console.error('Error downloading file:', error);
-        }));
+    const photo = ctx.message.photo;
+    const fileId = photo[photo.length - 1].file_id;
+    const filePath = await ctx.telegram.getFileLink(fileId);
+    const imagePath = filePath.href;
 
-        const uploadedFileEntry = await uploadFileToBeDrive(filePath, 'photo');
-        if (!uploadedFileEntry) throw new Error('Error uploading photo to BeDrive.');
+    const outputFilePath = `watermarked_${fileId}.jpg`;
+    await addWatermarkToImage(imagePath, outputFilePath, watermarkText);
 
-        const shareableLink = await generateShareableLink(uploadedFileEntry.id);
-        if (!shareableLink) throw new Error('Error generating shareable link.');
-
-        ctx.reply(`Your photo is uploaded!\nHere's the shareable link: ${shareableLink}`);
-    } catch (error) {
-        console.error('Error:', error.message);
-        ctx.reply('Sorry, an error occurred while processing your request.');
-    }
+    ctx.replyWithPhoto({ source: outputFilePath });
 });
 
-// Start the bot
+bot.on('video', async (ctx) => {
+    const fileId = ctx.message.video.file_id;
+    const filePath = await ctx.telegram.getFileLink(fileId);
+    const videoPath = filePath.href;
+
+    const outputFilePath = `watermarked_${fileId}.mp4`;
+    await addWatermarkToVideo(videoPath, outputFilePath, watermarkText, ctx);
+
+    const progressMessage = await ctx.reply('Processing video...');
+    const progressInterval = setInterval(() => {
+        if (usersProgress[ctx.chat.id]) {
+            ctx.telegram.editMessageText(ctx.chat.id, progressMessage.message_id, null, `Video processing: ${usersProgress[ctx.chat.id].toFixed(2)}%`);
+        }
+    }, 500);
+
+    bot.on('text', (ctx) => {
+        clearInterval(progressInterval);
+    });
+
+    ctx.replyWithVideo({ source: outputFilePath });
+});
+
 bot.launch();
