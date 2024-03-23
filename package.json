@@ -4,13 +4,12 @@
   "description": "A Telegram bot to watermark images and videos",
   "main": "main.js",
   "scripts": {
-    "start": "node main.js"
+    "start": "node mian.js"
   },
   "author": "Your Name",
   "license": "MIT",
   "dependencies": {
     "canvas": "^2.8.0",
-    "fluent-ffmpeg": "^2.8.0",
     "node-telegram-bot-api": "^0.54.0"
   }
 }
