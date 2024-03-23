@@ -4,11 +4,11 @@ const FormData = require('form-data');
 const fs = require('fs');
 
 // Telegram Bot token
-const botToken = 'YOUR_TELEGRAM_BOT_TOKEN'; // Replace with your Telegram Bot token
+const botToken = '6701652400:AAGj9Pm6dkfhGVQ42CJR-FqAUlFDzyyiAM4'; // Replace with your Telegram Bot token
 const bot = new Telegraf(botToken);
 
 // BeDrive access token
-const beDriveAccessToken = 'YOUR_BEDRIVE_ACCESS_TOKEN'; // Replace with your BeDrive access token
+const beDriveAccessToken = '1809|XFSAb8nRAQSz2RcBUva5ptwcpvuHRcavZjLZNr057321c06b'; // Replace with your BeDrive access token
 
 // BeDrive API endpoints
 const uploadEndpoint = 'https://bedrive.vebto.com/api/v1/uploads';
