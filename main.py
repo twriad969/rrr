@@ -4,29 +4,40 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, Callb
 from PIL import Image
 from moviepy.editor import VideoFileClip, TextClip, CompositeVideoClip
 
+# Bot token
+TOKEN = "6701652400:AAGj9Pm6dkfhGVQ42CJR-FqAUlFDzyyiAM4"
+
 # Function to add watermark to image
 def add_watermark_to_image(image_path, watermark_text):
     # Open the image
     img = Image.open(image_path)
     
-    # Add watermark
-    # You'll need to implement this part based on your watermarking method
+    # Add watermark (example: adding text at bottom-right corner)
+    watermark = Image.new('RGBA', img.size, (255, 255, 255, 0))
+    watermark_draw = ImageDraw.Draw(watermark)
+    watermark_draw.text((img.width - 200, img.height - 50), watermark_text, fill=(255, 255, 255, 128))
+    watermarked_img = Image.alpha_composite(img.convert('RGBA'), watermark)
     
     # Save the image with the watermark
-    img.save("watermarked_image.png")
+    watermarked_img.save("watermarked_image.png")
 
 # Function to add watermark to video
 def add_watermark_to_video(video_path, watermark_text):
     # Open the video
     video_clip = VideoFileClip(video_path)
     
-    # Add watermark
-    # You'll need to implement this part based on your watermarking method
+    # Add watermark (example: adding text at bottom-right corner)
+    txt_clip = TextClip(watermark_text, fontsize=70, color='white').set_position('bottom right').set_duration(video_clip.duration)
+    watermarked_clip = CompositeVideoClip([video_clip, txt_clip])
     
     # Save the video with the watermark
     watermarked_video_path = "watermarked_video.mp4"
-    video_clip.write_videofile(watermarked_video_path)
-    video_clip.close()
+    watermarked_clip.write_videofile(watermarked_video_path, codec='libx264')
+    watermarked_clip.close()
+
+# Command handler for /start
+def start(update: Update, context: CallbackContext):
+    update.message.reply_text("Welcome to the Watermark Bot! Send an image or a video to add a watermark.")
 
 # Command handler for /w
 def watermark_command(update: Update, context: CallbackContext):
@@ -54,15 +65,24 @@ def watermark_command(update: Update, context: CallbackContext):
     else:
         update.message.reply_text("Please send an image or a video to watermark.")
 
+# Error handler
+def error(update: Update, context: CallbackContext):
+    """Log Errors caused by Updates."""
+    context.error("Update '%s' caused error '%s'", update, context.error)
+
 def main():
     # Initialize the bot
-    updater = Updater("6701652400:AAGj9Pm6dkfhGVQ42CJR-FqAUlFDzyyiAM4", use_context=True)
+    updater = Updater(TOKEN, use_context=True)
 
     # Get the dispatcher to register handlers
     dp = updater.dispatcher
 
-    # Register the /w command handler
+    # Register command handlers
+    dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("w", watermark_command))
+
+    # Log all errors
+    dp.add_error_handler(error)
 
     # Start the Bot
     updater.start_polling()
