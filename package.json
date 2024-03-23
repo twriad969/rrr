@@ -1,17 +1,16 @@
 {
-  "name": "telegram-bot-example",
+  "name": "telegram-watermark-bot",
   "version": "1.0.0",
-  "description": "Telegram bot deployed on Heroku",
-  "main": "index.js",
+  "description": "A Telegram bot to watermark images and videos",
+  "main": "main.js",
   "scripts": {
     "start": "node main.js"
   },
   "author": "Your Name",
   "license": "MIT",
   "dependencies": {
-    "axios": "^0.24.0",
-    "form-data": "^4.0.0",
-    "fs": "0.0.1-security",
-    "telegraf": "^4.7.0"
+    "canvas": "^2.8.0",
+    "fluent-ffmpeg": "^2.8.0",
+    "node-telegram-bot-api": "^0.54.0"
   }
 }
