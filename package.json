@@ -4,7 +4,7 @@
   "description": "A Telegram bot to watermark images and videos",
   "main": "main.js",
   "scripts": {
-    "start": "node mian.js"
+    "start": "node main.js"
   },
   "author": "Your Name",
   "license": "MIT",
