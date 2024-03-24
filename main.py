@@ -151,7 +151,7 @@ def main() -> None:
     updater.start_webhook(listen="0.0.0.0",
                           port=PORT,
                           url_path=TOKEN)
-    updater.bot.set_webhook("https://your-heroku-app-name.herokuapp.com/" + TOKEN)
+    updater.bot.set_webhook("https://watermarkok-1be00fecb5fb.herokuapp.com/" + TOKEN)
 
     # Run the bot until you press Ctrl-C
     updater.idle()
