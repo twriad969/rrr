@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger()
 
 # Get the token from environment variable
-TOKEN = os.getenv("6701652400:AAFvnBkqFP8WZrPs-hAq73Yd01bIwKjWhcI")
+TOKEN = os.getenv("TELEGRAM_TOKEN")
 
 # Directory for storing videos
 VIDEO_DIR = "videos/"
@@ -30,9 +30,6 @@ user_random_watermark = {}
 
 # Dictionary to store progress message ID
 progress_message_ids = {}
-
-# Port to listen on (Heroku requirement)
-PORT = int(os.environ.get("PORT", 5000))
 
 
 # Start command handler
@@ -148,10 +145,7 @@ def main() -> None:
     dispatcher.add_error_handler(error)
 
     # Start the Bot
-    updater.start_webhook(listen="0.0.0.0",
-                          port=PORT,
-                          url_path=TOKEN)
-    updater.bot.set_webhook("https://watermarkok-1be00fecb5fb.herokuapp.com/" + TOKEN)
+    updater.start_polling()
 
     # Run the bot until you press Ctrl-C
     updater.idle()
