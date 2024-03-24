@@ -1,12 +1,20 @@
 import os
 import random
 import threading
+import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext, CallbackQueryHandler
+from telegram.ext import Dispatcher, PicklePersistence
+from telegram.ext import MessageQueue
 from moviepy.editor import VideoFileClip, TextClip, CompositeVideoClip
 
-# Telegram bot token
-TOKEN = "6701652400:AAFvnBkqFP8WZrPs-hAq73Yd01bIwKjWhcI"
+# Configure logging
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger()
+
+# Get the token from environment variable
+TOKEN = os.getenv("6701652400:AAFvnBkqFP8WZrPs-hAq73Yd01bIwKjWhcI")
 
 # Directory for storing videos
 VIDEO_DIR = "videos/"
@@ -22,6 +30,9 @@ user_random_watermark = {}
 
 # Dictionary to store progress message ID
 progress_message_ids = {}
+
+# Port to listen on (Heroku requirement)
+PORT = int(os.environ.get("PORT", 5000))
 
 
 # Start command handler
@@ -95,13 +106,13 @@ def handle_video(update: Update, context: CallbackContext) -> None:
 
     clip = VideoFileClip(video_path)
     txt_clip = TextClip(watermark_text, fontsize=50, color='white').set_position('bottom').set_duration(clip.duration)
-
+    
     if random_watermark:
         # Apply random watermark position
         watermark_x = random.randint(10, clip.size[0] - 200)
         watermark_y = random.randint(10, clip.size[1] - 50)
         txt_clip = txt_clip.set_position((watermark_x, watermark_y))
-
+    
     watermarked_clip = CompositeVideoClip([clip, txt_clip])
 
     # Save watermarked video
@@ -118,10 +129,11 @@ def handle_video(update: Update, context: CallbackContext) -> None:
 # Error handler
 def error(update: Update, context: CallbackContext) -> None:
     """Log Errors caused by Updates."""
-    print(f"Update {update} caused error {context.error}")
+    logger.warning(f"Update {update} caused error {context.error}")
 
 
 def main() -> None:
+    # Create the Updater and pass it your bot's token
     updater = Updater(TOKEN)
 
     # Get the dispatcher to register handlers
@@ -136,8 +148,12 @@ def main() -> None:
     dispatcher.add_error_handler(error)
 
     # Start the Bot
-    updater.start_polling()
+    updater.start_webhook(listen="0.0.0.0",
+                          port=PORT,
+                          url_path=TOKEN)
+    updater.bot.set_webhook("https://your-heroku-app-name.herokuapp.com/" + TOKEN)
 
+    # Run the bot until you press Ctrl-C
     updater.idle()
 
 
