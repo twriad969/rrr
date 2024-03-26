@@ -25,11 +25,6 @@ function sendMessageToUser(chatId, message, options) {
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
 
-  if (userData.has(chatId)) {
-    sendMessageToUser(chatId, "You've already generated a payment link. Please wait 5 mins to generate new");
-    return;
-  }
-
   const welcomeMsg = "Welcome to our bot! Please select your membership plan:";
   const options = {
     reply_markup: {
@@ -53,18 +48,33 @@ bot.on('callback_query', (callbackQuery) => {
 
   if (membership === 'lifetime') {
     if (userData.has(chatId)) {
-      sendMessageToUser(chatId, "You've already generated a payment link.");
+      sendMessageToUser(chatId, "You've already generated a payment link. Please wait 2 mins to make new");
       return;
     }
     amount = '150';
-    description = "You'll get lifetime access to premium content.";
+    description = "\n" +
+                  "150BDT LIFETIME PLAN\n\n" +
+                  "✅ DESI CONTENT REGULAR\n" +
+                  "✅ DOWNLOAD OPTION ON\n" +
+                  "✅ TANGO CONTENT\n" +
+                  "✅ DESI NUDE/S\n" +
+                  "✅ PREMIUM VIDEOS\n" +
+                  "✅ 40 PAID CHANNELS";
+
   } else if (membership === 'monthly') {
     if (userData.has(chatId)) {
-      sendMessageToUser(chatId, "You've already generated a payment link.");
+      sendMessageToUser(chatId, "You've already generated a payment link. Please wait 2 mins to make new");
       return;
     }
     amount = '50';
-    description = "You'll get 1 month access to premium content.";
+    description = "\n" +
+      "150BDT 1 MONTH PLAN\n\n" +
+      "✅ DESI CONTENT REGULAR\n" +
+      "❌ DOWNLOAD OPTION OFF\n" +
+      "❌ TANGO CONTENT\n" +
+      "✅ DESI NUDE/S\n" +
+      "✅ PREMIUM VIDEOS\n" +
+      "✅ 20 PAID CHANNELS";
   } else {
     return;
   }
@@ -125,7 +135,7 @@ bot.on('callback_query', (callbackQuery) => {
       setTimeout(() => {
         userData.delete(chatId);
         bot.deleteMessage(chatId, callbackQuery.message.message_id);
-      }, 300000); // 5 minutes in milliseconds
+      }, 120000); // 5 minutes in milliseconds
     } else {
       sendMessageToUser(chatId, 'Error occurred while generating payment link.');
     }
@@ -160,7 +170,7 @@ app.get('/payment-complete', (req, res) => {
       }
 
       // Send success message to user
-      sendMessageToUser(chatId, 'Congratulations! Your payment was successful.');
+      sendMessageToUser(chatId, 'Congratulations! Your payment was successful✅');
 
       // Delete old messages
       const userDataForChat = userData.get(chatId);
