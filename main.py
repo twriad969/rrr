@@ -1,155 +1,201 @@
-import os
-import random
-import threading
-import logging
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext, CallbackQueryHandler
-from telegram.ext import Dispatcher, PicklePersistence
-from telegram.ext import MessageQueue
-from moviepy.editor import VideoFileClip, TextClip, CompositeVideoClip
+const express = require('express');
+const bodyParser = require('body-parser');
+const request = require('request');
+const TelegramBot = require('node-telegram-bot-api');
+require('dotenv').config();
 
-# Configure logging
-logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger()
+const app = express();
+const port = process.env.PORT || 3000;
+const telegramToken = process.env.TELEGRAM_BOT_TOKEN;
+const uddoktapayApiKey = process.env.UDDOKTAPAY_API_KEY;
 
-# Get the token from environment variable
-TOKEN = os.getenv("TELEGRAM_TOKEN")
+const bot = new TelegramBot(telegramToken, { polling: true });
 
-# Directory for storing videos
-VIDEO_DIR = "videos/"
+app.use(bodyParser.json());
 
-# Create video directory if it doesn't exist
-os.makedirs(VIDEO_DIR, exist_ok=True)
+// Map to store user data
+const userData = new Map();
 
-# Dictionary to store user watermark preferences
-user_watermarks = {}
+// Function to send a message to Telegram user
+function sendMessageToUser(chatId, message, options) {
+  bot.sendMessage(chatId, message, options);
+}
 
-# Dictionary to store user random watermark preference
-user_random_watermark = {}
+// Welcome message and membership selection buttons
+bot.onText(/\/start/, (msg) => {
+  const chatId = msg.chat.id;
 
-# Dictionary to store progress message ID
-progress_message_ids = {}
+  if (userData.has(chatId)) {
+    sendMessageToUser(chatId, "You've already generated a payment link. Please wait 5 mins to generate new");
+    return;
+  }
 
+  const welcomeMsg = "Welcome to our bot! Please select your membership plan:";
+  const options = {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: 'Lifetime Membership (150tk)', callback_data: 'lifetime' }],
+        [{ text: '1 Month Membership (50tk)', callback_data: 'monthly' }]
+      ]
+    }
+  };
 
-# Start command handler
-def start(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text(
-        "Welcome to Video Watermark Bot!\n\n"
-        "Send /add to add your custom watermark.\n"
-        "Then send a video to add watermark.\n"
-        "Use /random on to apply random watermark position or /random off for default position."
-    )
+  sendMessageToUser(chatId, welcomeMsg, options);
+});
 
+// Handler for membership selection buttons
+bot.on('callback_query', (callbackQuery) => {
+  const chatId = callbackQuery.message.chat.id;
+  const membership = callbackQuery.data;
 
-# Add watermark command handler
-def add_watermark(update: Update, context: CallbackContext) -> None:
-    user_id = update.message.from_user.id
-    user_watermarks[user_id] = "ronok"  # Default watermark text
-    user_random_watermark[user_id] = False  # Default random watermark off
-    update.message.reply_text("Please send the text you want to use as a watermark.")
+  let amount;
+  let description;
 
+  if (membership === 'lifetime') {
+    if (userData.has(chatId)) {
+      sendMessageToUser(chatId, "You've already generated a payment link.");
+      return;
+    }
+    amount = '150';
+    description = "You'll get lifetime access to premium content.";
+  } else if (membership === 'monthly') {
+    if (userData.has(chatId)) {
+      sendMessageToUser(chatId, "You've already generated a payment link.");
+      return;
+    }
+    amount = '50';
+    description = "You'll get 1 month access to premium content.";
+  } else {
+    return;
+  }
 
-# Handle text messages to set watermark text
-def set_watermark_text(update: Update, context: CallbackContext) -> None:
-    user_id = update.message.from_user.id
-    user_watermarks[user_id] = update.message.text
-    update.message.reply_text(f"Watermark text set to: {user_watermarks[user_id]}")
+  const payload = {
+    full_name: callbackQuery.from.first_name,
+    email: callbackQuery.from.username + "@gmail.com",
+    amount: amount,
+    metadata: {
+      chat_id: chatId.toString(),
+      membership: membership
+    },
+    redirect_url: process.env.REPLIT_URL + '/payment-complete',
+    return_type: 'GET',
+    cancel_url: process.env.REPLIT_URL + '/payment-cancel',
+    webhook_url: process.env.REPLIT_URL + '/webhook'
+  };
 
+  const options = {
+    url: 'https://sandbox.uddoktapay.com/api/checkout-v2',
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'RT-UDDOKTAPAY-API-KEY': uddoktapayApiKey
+    },
+    body: JSON.stringify(payload)
+  };
 
-# Handle random watermark setting
-def set_random_watermark(update: Update, context: CallbackContext) -> None:
-    user_id = update.message.from_user.id
-    if context.args and context.args[0].lower() == "on":
-        user_random_watermark[user_id] = True
-        update.message.reply_text("Random watermark position is ON.")
-    elif context.args and context.args[0].lower() == "off":
-        user_random_watermark[user_id] = False
-        update.message.reply_text("Random watermark position is OFF.")
-    else:
-        update.message.reply_text("Please use /random on or /random off to set random watermark position.")
+  // Send request to UddoktaPay API
+  request(options, (error, response, body) => {
+    if (!error && response.statusCode === 200) {
+      const data = JSON.parse(body);
+      const paymentUrl = data.payment_url;
 
+      // Store user data
+      userData.set(chatId, {
+        paymentUrl: paymentUrl,
+        messageId: callbackQuery.message.message_id
+      });
 
-# Progress thread function
-def progress_thread(update: Update, context: CallbackContext, chat_id: int) -> None:
-    progress = 0
-    while progress < 100:
-        context.bot.edit_message_text(chat_id=chat_id, message_id=progress_message_ids[chat_id],
-                                      text=f"Processing video... {progress}%")
-        progress += 5
-        threading.Event().wait(5)  # Wait for 5 seconds
-    context.bot.edit_message_text(chat_id=chat_id, message_id=progress_message_ids[chat_id],
-                                  text="Video processing complete.")
+      // Send membership description and payment link
+      const message = `${description}\n\nClick the button below to make payment:`;
+      const payButton = {
+        inline_keyboard: [
+          [{ text: 'Make Payment', url: paymentUrl }]
+        ]
+      };
 
+      // Edit the existing message with payment link
+      bot.editMessageText(message, {
+        chat_id: chatId,
+        message_id: callbackQuery.message.message_id,
+        reply_markup: JSON.stringify(payButton)
+      });
 
-# Handle video messages
-def handle_video(update: Update, context: CallbackContext) -> None:
-    # Send progress message
-    progress_message = update.message.reply_text("Processing video...")
-    progress_message_ids[update.message.chat_id] = progress_message.message_id
+      // Schedule payment link removal after 5 minutes
+      setTimeout(() => {
+        userData.delete(chatId);
+        bot.deleteMessage(chatId, callbackQuery.message.message_id);
+      }, 300000); // 5 minutes in milliseconds
+    } else {
+      sendMessageToUser(chatId, 'Error occurred while generating payment link.');
+    }
+  });
+});
 
-    # Start progress thread
-    threading.Thread(target=progress_thread, args=(update, context, update.message.chat_id), daemon=True).start()
+// Endpoint to handle payment completion notification
+app.get('/payment-complete', (req, res) => {
+  const invoiceId = req.query.invoice_id;
 
-    # Download video
-    video_file = context.bot.get_file(update.message.video.file_id)
-    video_path = os.path.join(VIDEO_DIR, f"{update.message.video.file_id}.mp4")
-    video_file.download(video_path)
+  // Verify payment using invoice ID
+  const verifyPayload = { invoice_id: invoiceId };
+  const verifyOptions = {
+    url: 'https://sandbox.uddoktapay.com/api/verify-payment',
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'RT-UDDOKTAPAY-API-KEY': uddoktapayApiKey
+    },
+    body: JSON.stringify(verifyPayload)
+  };
 
-    # Apply watermark
-    user_id = update.message.from_user.id
-    watermark_text = user_watermarks.get(user_id, "ronok")
-    random_watermark = user_random_watermark.get(user_id, False)
+  request(verifyOptions, (error, response, body) => {
+    if (!error && response.statusCode === 200) {
+      const paymentData = JSON.parse(body);
+      const chatId = paymentData.metadata.chat_id;
 
-    clip = VideoFileClip(video_path)
-    txt_clip = TextClip(watermark_text, fontsize=50, color='white').set_position('bottom').set_duration(clip.duration)
-    
-    if random_watermark:
-        # Apply random watermark position
-        watermark_x = random.randint(10, clip.size[0] - 200)
-        watermark_y = random.randint(10, clip.size[1] - 50)
-        txt_clip = txt_clip.set_position((watermark_x, watermark_y))
-    
-    watermarked_clip = CompositeVideoClip([clip, txt_clip])
+      if (!chatId) {
+        res.status(400).send('Invalid chat ID');
+        return;
+      }
 
-    # Save watermarked video
-    watermarked_video_path = os.path.join(VIDEO_DIR, f"{update.message.video.file_id}_watermarked.mp4")
-    watermarked_clip.write_videofile(watermarked_video_path, codec="libx264", threads=4)
+      // Send success message to user
+      sendMessageToUser(chatId, 'Congratulations! Your payment was successful.');
 
-    # Upload watermarked video
-    context.bot.send_video(chat_id=update.effective_chat.id, video=open(watermarked_video_path, 'rb'))
+      // Delete old messages
+      const userDataForChat = userData.get(chatId);
+      if (userDataForChat && userDataForChat.messageId) {
+        bot.deleteMessage(chatId, userDataForChat.messageId);
+        userData.delete(chatId);
+      }
 
-    # Delete progress message
-    del progress_message_ids[update.message.chat_id]
+      // Send buttons for premium channels
+      const premiumChannelsButtons = {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: 'Premium Channel 1 (C1)', url: 'https://t.me/+jwVA1088ntI4NTY1' }],
+            [{ text: 'Premium Channel 2 (C2)', url: 'https://t.me/+jwVA1088ntI4NTY1' }]
+          ]
+        }
+      };
 
+      sendMessageToUser(chatId, "You now have access to our premium content.", premiumChannelsButtons);
 
-# Error handler
-def error(update: Update, context: CallbackContext) -> None:
-    """Log Errors caused by Updates."""
-    logger.warning(f"Update {update} caused error {context.error}")
+      res.sendStatus(200);
+    } else {
+      console.error('Error occurred while verifying payment:', error);
+      res.status(500).send('Error occurred while verifying payment.');
+    }
+  });
+});
 
+// Endpoint to handle payment cancellation notification
+app.post('/payment-cancel', (req, res) => {
+  res.send('Payment cancelled.');
+});
 
-def main() -> None:
-    # Create the Updater and pass it your bot's token
-    updater = Updater(TOKEN)
-
-    # Get the dispatcher to register handlers
-    dispatcher = updater.dispatcher
-
-    # Add handlers
-    dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(CommandHandler("add", add_watermark))
-    dispatcher.add_handler(CommandHandler("random", set_random_watermark))
-    dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, set_watermark_text))
-    dispatcher.add_handler(MessageHandler(Filters.video, handle_video))
-    dispatcher.add_error_handler(error)
-
-    # Start the Bot
-    updater.start_polling()
-
-    # Run the bot until you press Ctrl-C
-    updater.idle()
-
-
-if __name__ == '__main__':
-    main()
+// Start the server
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});
+      // Send success message to user
