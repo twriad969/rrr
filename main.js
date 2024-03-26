@@ -58,12 +58,12 @@ bot.on('callback_query', (callbackQuery) => {
                   "✅ DOWNLOAD OPTION ON\n" +
                   "✅ TANGO CONTENT\n" +
                   "✅ DESI NUDE/S\n" +
-                  "✅ PREMIUM VIDEOS\n" +
-                  "✅ 40 PAID CHANNELS";
+                  "✅ INDIAN MODEL NUD/ES\n" +
+                  "✅ 40 EXCLUSIVE CHANNELS";
 
   } else if (membership === 'monthly') {
     if (userData.has(chatId)) {
-      sendMessageToUser(chatId, "You've already generated a payment link. Please wait 2 mins to make new");
+      sendMessageToUser(chatId, "You've already generated a payment link. Please wait 2 mins to make new✅");
       return;
     }
     amount = '50';
@@ -71,7 +71,7 @@ bot.on('callback_query', (callbackQuery) => {
       "150BDT 1 MONTH PLAN\n\n" +
       "✅ DESI CONTENT REGULAR\n" +
       "❌ DOWNLOAD OPTION OFF\n" +
-      "❌ TANGO CONTENT\n" +
+      "❌ TANGO CONTENTS\n" +
       "✅ DESI NUDE/S\n" +
       "✅ PREMIUM VIDEOS\n" +
       "✅ 20 PAID CHANNELS";
@@ -117,7 +117,7 @@ bot.on('callback_query', (callbackQuery) => {
       });
 
       // Send membership description and payment link
-      const message = `${description}\n\nClick the button below to make payment:`;
+      const message = `${description}\n\nClick the button below to make payment:\nYou have 2 minutes to complete your payment`;
       const payButton = {
         inline_keyboard: [
           [{ text: 'Make Payment', url: paymentUrl }]
@@ -135,7 +135,7 @@ bot.on('callback_query', (callbackQuery) => {
       setTimeout(() => {
         userData.delete(chatId);
         bot.deleteMessage(chatId, callbackQuery.message.message_id);
-      }, 120000); // 5 minutes in milliseconds
+      }, 30000); // 5 minutes in milliseconds
     } else {
       sendMessageToUser(chatId, 'Error occurred while generating payment link.');
     }
@@ -183,8 +183,8 @@ app.get('/payment-complete', (req, res) => {
       const premiumChannelsButtons = {
         reply_markup: {
           inline_keyboard: [
-            [{ text: 'Premium Channel 1 (C1)', url: 'https://t.me/+jwVA1088ntI4NTY1' }],
-            [{ text: 'Premium Channel 2 (C2)', url: 'https://t.me/+jwVA1088ntI4NTY1' }]
+            [{ text: 'Premium Channel 1', url: 'https://t.me/+jwVA1088ntI4NTY1' }],
+            [{ text: 'Premium Channel 2', url: '' }]
           ]
         }
       };
