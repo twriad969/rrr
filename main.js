@@ -25,7 +25,7 @@ function sendMessageToUser(chatId, message, options) {
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
 
-  const welcomeMsg = "Welcome to our bot! Please select your membership plan:";
+  const welcomeMsg = "Welcome to our bot!🔥\n\nPlease select your membership plan:";
   const options = {
     reply_markup: {
       inline_keyboard: [
@@ -184,12 +184,12 @@ app.get('/payment-complete', (req, res) => {
         reply_markup: {
           inline_keyboard: [
             [{ text: 'Premium Channel 1', url: 'https://t.me/+jwVA1088ntI4NTY1' }],
-            [{ text: 'Premium Channel 2', url: '' }]
+            [{ text: 'Premium Channel 2', url: 'https://t.me/+HtfDVNyNaPcxNWVl' }]
           ]
         }
       };
 
-      sendMessageToUser(chatId, "You now have access to our premium content.", premiumChannelsButtons);
+      sendMessageToUser(chatId, "You now have access to our premium content🔥", premiumChannelsButtons);
 
       res.sendStatus(200);
     } else {
