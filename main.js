@@ -135,7 +135,7 @@ bot.on('callback_query', (callbackQuery) => {
       setTimeout(() => {
         userData.delete(chatId);
         bot.deleteMessage(chatId, callbackQuery.message.message_id);
-      }, 30000); // 5 minutes in milliseconds
+      }, 120000); // 5 minutes in milliseconds
     } else {
       sendMessageToUser(chatId, 'Error occurred while generating payment link.');
     }
