@@ -119,10 +119,10 @@ bot.on('callback_query', (callbackQuery) => {
       // Send membership description and payment link
       const message = `${description}\n\nClick the button below to make payment:\nYou have 2 minutes to complete your payment`;
       const payButton = {
-        inline_keyboard: [
-          [{ text: 'Make Payment', url: paymentUrl }]
-        ]
-      };
+  inline_keyboard: [
+    [{ text: 'Make Payment', url: paymentUrl }]
+  ]
+};
 
       // Edit the existing message with payment link
       bot.editMessageText(message, {
