@@ -94,7 +94,7 @@ bot.on('callback_query', (callbackQuery) => {
   };
 
   const options = {
-    url: 'https://sandbox.uddoktapay.com/api/checkout-v2',
+    url: 'https://payment.mlobd.online/api/checkout-v2',
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -149,7 +149,7 @@ app.get('/payment-complete', (req, res) => {
   // Verify payment using invoice ID
   const verifyPayload = { invoice_id: invoiceId };
   const verifyOptions = {
-    url: 'https://sandbox.uddoktapay.com/api/verify-payment',
+    url: 'https://payment.mlobd.online/api/verify-payment',
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
