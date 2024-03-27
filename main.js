@@ -25,6 +25,13 @@ function sendMessageToUser(chatId, message, options) {
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
 
+  // Delete old 150tk button message if exists
+  if (userData.has(chatId)) {
+    const storedData = userData.get(chatId);
+    bot.deleteMessage(chatId, storedData.messageId);
+    userData.delete(chatId);
+  }
+
   const welcomeMsg = "Welcome to our bot!🔥\n\nPlease select your membership plan:";
   const options = {
     reply_markup: {
@@ -47,25 +54,17 @@ bot.on('callback_query', (callbackQuery) => {
   let description;
 
   if (membership === 'lifetime') {
-    if (userData.has(chatId)) {
-      sendMessageToUser(chatId, "You've already generated a payment link. Please wait 2 mins to make new");
-      return;
-    }
     amount = '150';
     description = "\n" +
-                  "150BDT LIFETIME PLAN\n\n" +
-                  "✅ DESI CONTENT REGULAR\n" +
-                  "✅ DOWNLOAD OPTION ON\n" +
-                  "✅ TANGO CONTENT\n" +
-                  "✅ DESI NUDE/S\n" +
-                  "✅ INDIAN MODEL NUD/ES\n" +
-                  "✅ 40 EXCLUSIVE CHANNELS";
+      "150BDT LIFETIME PLAN\n\n" +
+      "✅ DESI CONTENT REGULAR\n" +
+      "✅ DOWNLOAD OPTION ON\n" +
+      "✅ TANGO CONTENT\n" +
+      "✅ DESI NUDE/S\n" +
+      "✅ INDIAN MODEL NUD/ES\n" +
+      "✅ 40 EXCLUSIVE CHANNELS";
 
   } else if (membership === 'monthly') {
-    if (userData.has(chatId)) {
-      sendMessageToUser(chatId, "You've already generated a payment link. Please wait 2 mins to make new✅");
-      return;
-    }
     amount = '50';
     description = "\n" +
       "150BDT 1 MONTH PLAN\n\n" +
@@ -111,31 +110,35 @@ bot.on('callback_query', (callbackQuery) => {
       const paymentUrl = data.payment_url;
 
       // Store user data
+      const messageId = callbackQuery.message.message_id;
       userData.set(chatId, {
         paymentUrl: paymentUrl,
-        messageId: callbackQuery.message.message_id
+        messageId: messageId
       });
 
       // Send membership description and payment link
       const message = `${description}\n\nClick the button below to make payment:\nYou have 2 minutes to complete your payment`;
       const payButton = {
-  inline_keyboard: [
-    [{ text: 'Make Payment', url: paymentUrl }]
-  ]
-};
+        inline_keyboard: [
+          [{ text: 'Make Payment', url: paymentUrl }]
+        ]
+      };
 
       // Edit the existing message with payment link
       bot.editMessageText(message, {
         chat_id: chatId,
-        message_id: callbackQuery.message.message_id,
+        message_id: messageId,
         reply_markup: JSON.stringify(payButton)
       });
 
-      // Schedule payment link removal after 5 minutes
+      // Schedule payment link removal after 2 minutes
       setTimeout(() => {
-        userData.delete(chatId);
-        bot.deleteMessage(chatId, callbackQuery.message.message_id);
-      }, 120000); // 5 minutes in milliseconds
+        if (userData.has(chatId)) {
+          const storedData = userData.get(chatId);
+          bot.deleteMessage(chatId, storedData.messageId);
+          userData.delete(chatId);
+        }
+      }, 120000);
     } else {
       sendMessageToUser(chatId, 'Error occurred while generating payment link.');
     }
@@ -162,7 +165,7 @@ app.get('/payment-complete', (req, res) => {
   request(verifyOptions, (error, response, body) => {
     if (!error && response.statusCode === 200) {
       const paymentData = JSON.parse(body);
-      const chatId = paymentData.metadata.chat_id;
+      const chatId = paymentData.metadata ? paymentData.metadata.chat_id : null;
 
       if (!chatId) {
         res.status(400).send('Invalid chat ID');
@@ -173,9 +176,9 @@ app.get('/payment-complete', (req, res) => {
       sendMessageToUser(chatId, 'Congratulations! Your payment was successful✅');
 
       // Delete old messages
-      const userDataForChat = userData.get(chatId);
-      if (userDataForChat && userDataForChat.messageId) {
-        bot.deleteMessage(chatId, userDataForChat.messageId);
+      const storedData = userData.get(chatId);
+      if (storedData) {
+        bot.deleteMessage(chatId, storedData.messageId);
         userData.delete(chatId);
       }
 
@@ -193,8 +196,7 @@ app.get('/payment-complete', (req, res) => {
 
       res.sendStatus(200);
     } else {
-      console.error('Error occurred while verifying payment:', error);
-      res.status(500).send('Error occurred while verifying payment.');
+      console.error('Error occurred while verifying payment.');
     }
   });
 });
@@ -208,4 +210,3 @@ app.post('/payment-cancel', (req, res) => {
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
-      // Send success message to user
