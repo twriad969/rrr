@@ -1,14 +1,15 @@
 {
-  "name": "telegram-bot-watermark",
+  "name": "telegram-bot",
   "version": "1.0.0",
-  "description": "Telegram bot for adding watermarks to images",
+  "description": "Telegram bot to watermark images",
   "main": "main.js",
   "scripts": {
     "start": "node main.js"
   },
+  "author": "Your Name",
+  "license": "MIT",
   "dependencies": {
-    "axios": "^0.24.0",
-    "canvas": "^2.10.2",
-    "node-telegram-bot-api": "^0.52.0"
+    "node-telegram-bot-api": "^0.56.0",
+    "jimp": "^0.16.1"
   }
 }
