@@ -1,99 +1,39 @@
 const TelegramBot = require('node-telegram-bot-api');
-const fs = require('fs');
-const { createCanvas, loadImage } = require('canvas');
-const axios = require('axios');
+const Jimp = require('jimp');
 
+// Telegram bot token
 const token = '6663409312:AAHcW5A_mnhWHwSdZrFm9eJx1RxqzWKrS0c';
+
+// Create a bot instance
 const bot = new TelegramBot(token, { polling: true });
 
-let watermarkUrl = '';
-let watermarkOpacity = 0.6;
-
+// Start command
 bot.onText(/\/start/, (msg) => {
-    const chatId = msg.chat.id;
-    bot.sendMessage(chatId, 'Welcome to Watermark Bot! Send me an image and I will add a watermark to it. Use /water to set a custom watermark.');
+  const chatId = msg.chat.id;
+  const startMessage = `Welcome to the Image Watermarker Bot! Send me any photo and I'll watermark it with "@ronok" for you.`;
+  bot.sendMessage(chatId, startMessage);
 });
 
-bot.onText(/\/water (.+)/, (msg, match) => {
-    const chatId = msg.chat.id;
-    const url = match[1];
+// Handle photo messages
+bot.on('photo', async (msg) => {
+  const chatId = msg.chat.id;
+  const photo = msg.photo[0].file_id;
 
-    axios({
-        method: 'get',
-        url: url,
-        responseType: 'stream'
-    }).then(response => {
-        response.data.pipe(fs.createWriteStream('watermark.png'));
-        watermarkUrl = 'watermark.png';
-        bot.sendMessage(chatId, 'Watermark image updated successfully!');
-    }).catch(error => {
-        console.log(error);
-        bot.sendMessage(chatId, 'Failed to update watermark image.');
+  // Get the photo file
+  const file = await bot.getFile(photo);
+  const photoUrl = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
+
+  // Watermark the image
+  Jimp.read(photoUrl, (err, image) => {
+    if (err) {
+      console.error(err);
+      return bot.sendMessage(chatId, 'Sorry, something went wrong.');
+    }
+    Jimp.loadFont(Jimp.FONT_SANS_16_BLACK).then((font) => {
+      image.print(font, 10, 10, '@ronok').write('watermarked.jpg', () => {
+        // Send the watermarked image
+        bot.sendPhoto(chatId, 'watermarked.jpg', { caption: 'Here is your watermarked image.' });
+      });
     });
+  });
 });
-
-bot.on('message', async (msg) => {
-    const chatId = msg.chat.id;
-
-    if (msg.photo && msg.photo.length > 0) {
-        const photoId = msg.photo[msg.photo.length - 1].file_id;
-
-        const photoFilePath = await bot.downloadFile(photoId, './');
-
-        const watermarkedPhotoFilePath = await watermarkImage(photoFilePath);
-
-        bot.sendPhoto(chatId, watermarkedPhotoFilePath);
-
-        fs.unlinkSync(photoFilePath);
-        fs.unlinkSync(watermarkedPhotoFilePath);
-    } else {
-        bot.sendMessage(chatId, 'Please send a photo.');
-    }
-});
-
-async function watermarkImage(inputFilePath) {
-    const canvas = createCanvas(1000, 1000); 
-    const ctx = canvas.getContext('2d');
-
-    const image = await loadImage(inputFilePath);
-
-    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-
-    let watermark;
-    if (watermarkUrl) {
-        watermark = await loadImage(watermarkUrl);
-    } else {
-        ctx.font = '48px Arial';
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-        ctx.textAlign = 'center';
-        ctx.fillText('@demo', canvas.width / 2, canvas.height / 2);
-    }
-
-    if (watermark) {
-        const x = (canvas.width - watermark.width) / 2;
-        const y = (canvas.height - watermark.height) / 2;
-
-        ctx.globalAlpha = watermarkOpacity;
-        ctx.drawImage(watermark, x, y);
-
-        ctx.globalAlpha = 1;
-    }
-
-    const outputFilePath = `${__dirname}/file_watermarked.jpg`;
-    const outputStream = fs.createWriteStream(outputFilePath);
-    const stream = canvas.createJPEGStream({ quality: 0.95 });
-
-    await new Promise((resolve, reject) => {
-        stream.pipe(outputStream);
-        outputStream.on('finish', resolve);
-        outputStream.on('error', reject);
-    });
-
-    return outputFilePath;
-}
-
-bot.on('polling_error', (error) => {
-    console.error(error);
-});
-
-console.log('Bot is running...');
