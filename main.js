@@ -1,212 +1,108 @@
-const express = require('express');
-const bodyParser = require('body-parser');
-const request = require('request');
 const TelegramBot = require('node-telegram-bot-api');
-require('dotenv').config();
+const fs = require('fs');
+const { createCanvas, loadImage } = require('canvas');
+const axios = require('axios');
 
-const app = express();
-const port = process.env.PORT || 3000;
-const telegramToken = process.env.TELEGRAM_BOT_TOKEN;
-const uddoktapayApiKey = process.env.UDDOKTAPAY_API_KEY;
+// Replace 'YOUR_TELEGRAM_BOT_TOKEN' with your actual bot token obtained from BotFather
+const bot = new TelegramBot('6663409312:AAHcW5A_mnhWHwSdZrFm9eJx1RxqzWKrS0c', { polling: true });
 
-const bot = new TelegramBot(telegramToken, { polling: true });
+let watermarkUrl = ''; // Stores the URL of the watermark image
+let watermarkOpacity = 0.6; // Default opacity for watermark
 
-app.use(bodyParser.json());
-
-// Map to store user data
-const userData = new Map();
-
-// Function to send a message to Telegram user
-function sendMessageToUser(chatId, message, options) {
-  bot.sendMessage(chatId, message, options);
-}
-
-// Welcome message and membership selection buttons
+// Start message handler
 bot.onText(/\/start/, (msg) => {
-  const chatId = msg.chat.id;
-
-  // Delete old 150tk button message if exists
-  if (userData.has(chatId)) {
-    const storedData = userData.get(chatId);
-    bot.deleteMessage(chatId, storedData.messageId);
-    userData.delete(chatId);
-  }
-
-  const welcomeMsg = "Welcome to our bot!🔥\n\nPlease select your membership plan:";
-  const options = {
-    reply_markup: {
-      inline_keyboard: [
-        [{ text: 'Lifetime Membership (150tk)', callback_data: 'lifetime' }],
-        [{ text: '1 Month Membership (50tk)', callback_data: 'monthly' }]
-      ]
-    }
-  };
-
-  sendMessageToUser(chatId, welcomeMsg, options);
+    const chatId = msg.chat.id;
+    bot.sendMessage(chatId, 'Welcome to Watermark Bot! Send me an image and I will add a watermark to it. Use /water to set a custom watermark.');
 });
 
-// Handler for membership selection buttons
-bot.on('callback_query', (callbackQuery) => {
-  const chatId = callbackQuery.message.chat.id;
-  const membership = callbackQuery.data;
+bot.onText(/\/water (.+)/, (msg, match) => {
+    const chatId = msg.chat.id;
+    const url = match[1];
 
-  let amount;
-  let description;
+    // Download the PNG image from the provided URL
+    axios({
+        method: 'get',
+        url: url,
+        responseType: 'stream'
+    }).then(response => {
+        response.data.pipe(fs.createWriteStream('watermark.png'));
+        watermarkUrl = 'watermark.png';
+        bot.sendMessage(chatId, 'Watermark image updated successfully!');
+    }).catch(error => {
+        console.log(error);
+        bot.sendMessage(chatId, 'Failed to update watermark image.');
+    });
+});
 
-  if (membership === 'lifetime') {
-    amount = '150';
-    description = "\n" +
-      "150BDT LIFETIME PLAN\n\n" +
-      "✅ DESI CONTENT REGULAR\n" +
-      "✅ DOWNLOAD OPTION ON\n" +
-      "✅ TANGO CONTENT\n" +
-      "✅ DESI NUDE/S\n" +
-      "✅ INDIAN MODEL NUD/ES\n" +
-      "✅ 40 EXCLUSIVE CHANNELS";
+bot.on('message', async (msg) => {
+    const chatId = msg.chat.id;
 
-  } else if (membership === 'monthly') {
-    amount = '50';
-    description = "\n" +
-      "150BDT 1 MONTH PLAN\n\n" +
-      "✅ DESI CONTENT REGULAR\n" +
-      "❌ DOWNLOAD OPTION OFF\n" +
-      "❌ TANGO CONTENTS\n" +
-      "✅ DESI NUDE/S\n" +
-      "✅ PREMIUM VIDEOS\n" +
-      "✅ 20 PAID CHANNELS";
-  } else {
-    return;
-  }
+    // Check if the message contains a photo
+    if (msg.photo && msg.photo.length > 0) {
+        const photoId = msg.photo[msg.photo.length - 1].file_id;
 
-  const payload = {
-    full_name: callbackQuery.from.first_name,
-    email: callbackQuery.from.username + "@gmail.com",
-    amount: amount,
-    metadata: {
-      chat_id: chatId.toString(),
-      membership: membership
-    },
-    redirect_url: process.env.REPLIT_URL + '/payment-complete',
-    return_type: 'GET',
-    cancel_url: process.env.REPLIT_URL + '/payment-cancel',
-    webhook_url: process.env.REPLIT_URL + '/webhook'
-  };
+        // Download the photo
+        const photoFilePath = await bot.downloadFile(photoId, './');
 
-  const options = {
-    url: 'https://payment.mlobd.online/api/checkout-v2',
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'RT-UDDOKTAPAY-API-KEY': uddoktapayApiKey
-    },
-    body: JSON.stringify(payload)
-  };
+        // Watermark the photo
+        const watermarkedPhotoFilePath = await watermarkImage(photoFilePath);
 
-  // Send request to UddoktaPay API
-  request(options, (error, response, body) => {
-    if (!error && response.statusCode === 200) {
-      const data = JSON.parse(body);
-      const paymentUrl = data.payment_url;
+        // Send the watermarked photo back to the user
+        bot.sendPhoto(chatId, watermarkedPhotoFilePath);
 
-      // Store user data
-      const messageId = callbackQuery.message.message_id;
-      userData.set(chatId, {
-        paymentUrl: paymentUrl,
-        messageId: messageId
-      });
-
-      // Send membership description and payment link
-      const message = `${description}\n\nClick the button below to make payment:\nYou have 2 minutes to complete your payment`;
-      const payButton = {
-        inline_keyboard: [
-          [{ text: 'Make Payment', url: paymentUrl }]
-        ]
-      };
-
-      // Edit the existing message with payment link
-      bot.editMessageText(message, {
-        chat_id: chatId,
-        message_id: messageId,
-        reply_markup: JSON.stringify(payButton)
-      });
-
-      // Schedule payment link removal after 2 minutes
-      setTimeout(() => {
-        if (userData.has(chatId)) {
-          const storedData = userData.get(chatId);
-          bot.deleteMessage(chatId, storedData.messageId);
-          userData.delete(chatId);
-        }
-      }, 120000);
+        // Remove the temporary files
+        fs.unlinkSync(photoFilePath);
+        fs.unlinkSync(watermarkedPhotoFilePath);
     } else {
-      sendMessageToUser(chatId, 'Error occurred while generating payment link.');
+        bot.sendMessage(chatId, 'Please send a photo.');
     }
-  });
 });
 
-// Endpoint to handle payment completion notification
-app.get('/payment-complete', (req, res) => {
-  const invoiceId = req.query.invoice_id;
+async function watermarkImage(inputFilePath) {
+    const canvas = createCanvas(1000, 1000); // Adjust canvas size as needed
+    const ctx = canvas.getContext('2d');
 
-  // Verify payment using invoice ID
-  const verifyPayload = { invoice_id: invoiceId };
-  const verifyOptions = {
-    url: 'https://payment.mlobd.online/api/verify-payment',
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'RT-UDDOKTAPAY-API-KEY': uddoktapayApiKey
-    },
-    body: JSON.stringify(verifyPayload)
-  };
+    // Load image
+    const image = await loadImage(inputFilePath);
 
-  request(verifyOptions, (error, response, body) => {
-    if (!error && response.statusCode === 200) {
-      const paymentData = JSON.parse(body);
-      const chatId = paymentData.metadata ? paymentData.metadata.chat_id : null;
+    // Draw image on canvas
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
 
-      if (!chatId) {
-        res.status(400).send('Invalid chat ID');
-        return;
-      }
-
-      // Send success message to user
-      sendMessageToUser(chatId, 'Congratulations! Your payment was successful✅');
-
-      // Delete old messages
-      const storedData = userData.get(chatId);
-      if (storedData) {
-        bot.deleteMessage(chatId, storedData.messageId);
-        userData.delete(chatId);
-      }
-
-      // Send buttons for premium channels
-      const premiumChannelsButtons = {
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: 'Premium Channel 1', url: 'https://t.me/+jwVA1088ntI4NTY1' }],
-            [{ text: 'Premium Channel 2', url: 'https://t.me/+HtfDVNyNaPcxNWVl' }]
-          ]
-        }
-      };
-
-      sendMessageToUser(chatId, "You now have access to our premium content🔥", premiumChannelsButtons);
-
-      res.sendStatus(200);
+    // Load watermark image or use default demo watermark
+    let watermark;
+    if (watermarkUrl) {
+        watermark = await loadImage(watermarkUrl);
     } else {
-      console.error('Error occurred while verifying payment.');
+        // Use default demo watermark
+        ctx.font = '48px Arial';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.textAlign = 'center';
+        ctx.fillText('@demo', canvas.width / 2, canvas.height / 2);
     }
-  });
-});
 
-// Endpoint to handle payment cancellation notification
-app.post('/payment-cancel', (req, res) => {
-  res.send('Payment cancelled.');
-});
+    if (watermark) {
+        // Calculate position for watermark
+        const x = (canvas.width - watermark.width) / 2;
+        const y = (canvas.height - watermark.height) / 2;
 
-// Start the server
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-});
+        // Draw watermark image with opacity
+        ctx.globalAlpha = watermarkOpacity;
+        ctx.drawImage(watermark, x, y);
+
+        // Reset opacity
+        ctx.globalAlpha = 1;
+    }
+
+    // Save canvas to a new image file
+    const outputFilePath = inputFilePath.replace(/\.[^/.]+$/, '_watermarked.jpg');
+    const outputStream = fs.createWriteStream(outputFilePath);
+    const stream = canvas.createJPEGStream({ quality: 0.95 });
+
+    await new Promise((resolve, reject) => {
+        stream.pipe(outputStream);
+        outputStream.on('finish', resolve);
+        outputStream.on('error', reject);
+    });
+
+    return outputFilePath;
+}
