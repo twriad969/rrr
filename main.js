@@ -3,7 +3,7 @@ const fs = require('fs');
 const gm = require('gm').subClass({ imageMagick: true });
 
 // Telegram bot token
-const token = 'YOUR_TELEGRAM_BOT_TOKEN';
+const token = '6663409312:AAHcW5A_mnhWHwSdZrFm9eJx1RxqzWKrS0c';
 
 // Create a bot instance
 const bot = new TelegramBot(token, { polling: true });
