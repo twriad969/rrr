@@ -1,7 +1,7 @@
 {
   "name": "telegram-bot",
   "version": "1.0.0",
-  "description": "Telegram bot to watermark images",
+  "description": "Telegram bot to watermark images and videos",
   "main": "main.js",
   "scripts": {
     "start": "node main.js"
@@ -10,6 +10,7 @@
   "license": "MIT",
   "dependencies": {
     "node-telegram-bot-api": "^0.56.0",
-    "gm": "^1.23.1"
+    "gm": "^1.23.1",
+    "fluent-ffmpeg": "^2.1.2"
   }
 }
