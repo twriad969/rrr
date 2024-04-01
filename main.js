@@ -1,5 +1,5 @@
 const TelegramBot = require('node-telegram-bot-api');
-const gm = require('gm').subClass({ imageMagick: true });
+const { createCanvas, loadImage } = require('canvas');
 const ffmpeg = require('fluent-ffmpeg');
 
 // Telegram bot token
@@ -25,17 +25,25 @@ bot.on('photo', async (msg) => {
   const photoUrl = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
 
   // Watermark the image
-  gm(photoUrl)
-    .fontSize(36)
-    .drawText(20, 20, '@ronok')
-    .toBuffer('JPG', function(err, buffer) {
-      if (err) {
-        console.error(err);
-        return bot.sendMessage(chatId, 'Sorry, something went wrong.');
-      }
-      // Send the watermarked image
-      bot.sendPhoto(chatId, buffer, { caption: 'Here is your watermarked image.' });
-    });
+  // Here we can use gm or another image processing library
+  // For simplicity, we'll use the canvas library for text overlay
+  const canvas = createCanvas();
+  const ctx = canvas.getContext('2d');
+
+  const image = await loadImage(photoUrl);
+  canvas.width = image.width;
+  canvas.height = image.height;
+  ctx.drawImage(image, 0, 0);
+
+  ctx.font = '36px Arial';
+  ctx.fillStyle = 'white';
+  ctx.fillText('@ronok', 20, 50);
+
+  // Convert the canvas to a buffer
+  const buffer = canvas.toBuffer('image/jpeg');
+
+  // Send the watermarked image
+  bot.sendPhoto(chatId, buffer, { caption: 'Here is your watermarked image.' });
 });
 
 // Handle video messages
@@ -47,23 +55,6 @@ bot.on('video', async (msg) => {
   const file = await bot.getFile(video);
   const videoUrl = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
 
-  // Watermark the video
-  const outputFilePath = 'watermarked_video.mp4';
-  const watermarkCommand = ffmpeg(videoUrl)
-    .videoFilters('drawtext=text=@ronok:fontsize=24:x=10:y=10:shadowcolor=black:shadowx=2:shadowy=2')
-    .on('progress', (progress) => {
-      const percentage = Math.round(progress.percent);
-      bot.sendMessage(chatId, `Processing: ${percentage}%`);
-    })
-    .save(outputFilePath);
-
-  watermarkCommand.on('end', () => {
-    // Send the watermarked video
-    bot.sendVideo(chatId, outputFilePath, { caption: 'Here is your watermarked video.' });
-  });
-
-  watermarkCommand.on('error', (err) => {
-    console.error(err);
-    bot.sendMessage(chatId, 'Sorry, something went wrong.');
-  });
+  // Send a message indicating that video watermarking is not supported
+  bot.sendMessage(chatId, 'Sorry, watermarking videos is not supported by this bot yet.');
 });
