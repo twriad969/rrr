@@ -1,8 +1,9 @@
 const TelegramBot = require('node-telegram-bot-api');
-const Jimp = require('jimp');
+const fs = require('fs');
+const gm = require('gm').subClass({ imageMagick: true });
 
 // Telegram bot token
-const token = '6663409312:AAHcW5A_mnhWHwSdZrFm9eJx1RxqzWKrS0c';
+const token = 'YOUR_TELEGRAM_BOT_TOKEN';
 
 // Create a bot instance
 const bot = new TelegramBot(token, { polling: true });
@@ -24,22 +25,15 @@ bot.on('photo', async (msg) => {
   const photoUrl = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
 
   // Watermark the image
-  Jimp.read(photoUrl, (err, image) => {
-    if (err) {
-      console.error(err);
-      return bot.sendMessage(chatId, 'Sorry, something went wrong.');
-    }
-    Jimp.loadFont(Jimp.FONT_SANS_16_BLACK).then((font) => {
-      image.print(font, 10, 10, '@ronok')
-           .quality(100) // Set image quality to 100%
-           .getBuffer(Jimp.MIME_JPEG, (err, buffer) => {
-              if (err) {
-                console.error(err);
-                return bot.sendMessage(chatId, 'Sorry, something went wrong.');
-              }
-              // Send the watermarked image
-              bot.sendPhoto(chatId, buffer, { caption: 'Here is your watermarked image.' });
-           });
+  gm(request(photoUrl))
+    .fontSize(36)
+    .drawText(20, 20, '@ronok')
+    .toBuffer('JPG', function(err, buffer) {
+      if (err) {
+        console.error(err);
+        return bot.sendMessage(chatId, 'Sorry, something went wrong.');
+      }
+      // Send the watermarked image
+      bot.sendPhoto(chatId, buffer, { caption: 'Here is your watermarked image.' });
     });
-  });
 });
