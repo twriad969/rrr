@@ -1,5 +1,4 @@
 const TelegramBot = require('node-telegram-bot-api');
-const fs = require('fs');
 const gm = require('gm').subClass({ imageMagick: true });
 
 // Telegram bot token
@@ -25,7 +24,7 @@ bot.on('photo', async (msg) => {
   const photoUrl = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
 
   // Watermark the image
-  gm(request(photoUrl))
+  gm(photoUrl)
     .fontSize(36)
     .drawText(20, 20, '@ronok')
     .toBuffer('JPG', function(err, buffer) {
