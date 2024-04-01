@@ -1,5 +1,6 @@
 const TelegramBot = require('node-telegram-bot-api');
 const gm = require('gm').subClass({ imageMagick: true });
+const ffmpeg = require('fluent-ffmpeg');
 
 // Telegram bot token
 const token = '6663409312:AAHcW5A_mnhWHwSdZrFm9eJx1RxqzWKrS0c';
@@ -10,7 +11,7 @@ const bot = new TelegramBot(token, { polling: true });
 // Start command
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
-  const startMessage = `Welcome to the Image Watermarker Bot! Send me any photo and I'll watermark it with "@ronok" for you.`;
+  const startMessage = `Welcome to the Media Watermarker Bot! Send me any photo or video and I'll watermark it with "@ronok" for you.`;
   bot.sendMessage(chatId, startMessage);
 });
 
@@ -35,4 +36,34 @@ bot.on('photo', async (msg) => {
       // Send the watermarked image
       bot.sendPhoto(chatId, buffer, { caption: 'Here is your watermarked image.' });
     });
+});
+
+// Handle video messages
+bot.on('video', async (msg) => {
+  const chatId = msg.chat.id;
+  const video = msg.video.file_id;
+
+  // Get the video file
+  const file = await bot.getFile(video);
+  const videoUrl = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
+
+  // Watermark the video
+  const outputFilePath = 'watermarked_video.mp4';
+  const watermarkCommand = ffmpeg(videoUrl)
+    .videoFilters('drawtext=text=@ronok:fontsize=24:x=10:y=10:shadowcolor=black:shadowx=2:shadowy=2')
+    .on('progress', (progress) => {
+      const percentage = Math.round(progress.percent);
+      bot.sendMessage(chatId, `Processing: ${percentage}%`);
+    })
+    .save(outputFilePath);
+
+  watermarkCommand.on('end', () => {
+    // Send the watermarked video
+    bot.sendVideo(chatId, outputFilePath, { caption: 'Here is your watermarked video.' });
+  });
+
+  watermarkCommand.on('error', (err) => {
+    console.error(err);
+    bot.sendMessage(chatId, 'Sorry, something went wrong.');
+  });
 });
