@@ -2,9 +2,9 @@
   "name": "telegram-bot-watermark",
   "version": "1.0.0",
   "description": "Telegram bot for adding watermarks to images",
-  "main": "index.js",
+  "main": "main.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node main.js"
   },
   "dependencies": {
     "axios": "^0.24.0",
