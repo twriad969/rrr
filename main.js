@@ -3,12 +3,11 @@ const fs = require('fs');
 const { createCanvas, loadImage } = require('canvas');
 const axios = require('axios');
 
-// Replace 'YOUR_TELEGRAM_BOT_TOKEN' with your actual bot token obtained from BotFather
 const token = '6663409312:AAHcW5A_mnhWHwSdZrFm9eJx1RxqzWKrS0c';
 const bot = new TelegramBot(token, { polling: true });
 
-let watermarkUrl = ''; // Stores the URL of the watermark image
-let watermarkOpacity = 0.6; // Default opacity for watermark
+let watermarkUrl = '';
+let watermarkOpacity = 0.6;
 
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
@@ -80,7 +79,7 @@ async function watermarkImage(inputFilePath) {
         ctx.globalAlpha = 1;
     }
 
-    const outputFilePath = inputFilePath.replace(/\.[^/.]+$/, '_watermarked.jpg');
+    const outputFilePath = `${__dirname}/file_watermarked.jpg`;
     const outputStream = fs.createWriteStream(outputFilePath);
     const stream = canvas.createJPEGStream({ quality: 0.95 });
 
@@ -97,5 +96,4 @@ bot.on('polling_error', (error) => {
     console.error(error);
 });
 
-// Start the bot
 console.log('Bot is running...');
