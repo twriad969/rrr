@@ -30,10 +30,16 @@ bot.on('photo', async (msg) => {
       return bot.sendMessage(chatId, 'Sorry, something went wrong.');
     }
     Jimp.loadFont(Jimp.FONT_SANS_16_BLACK).then((font) => {
-      image.print(font, 10, 10, '@ronok').write('watermarked.jpg', () => {
-        // Send the watermarked image
-        bot.sendPhoto(chatId, 'watermarked.jpg', { caption: 'Here is your watermarked image.' });
-      });
+      image.print(font, 10, 10, '@ronok')
+           .quality(100) // Set image quality to 100%
+           .getBuffer(Jimp.MIME_JPEG, (err, buffer) => {
+              if (err) {
+                console.error(err);
+                return bot.sendMessage(chatId, 'Sorry, something went wrong.');
+              }
+              // Send the watermarked image
+              bot.sendPhoto(chatId, buffer, { caption: 'Here is your watermarked image.' });
+           });
     });
   });
 });
