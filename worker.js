@@ -143,7 +143,7 @@ async function handleMessage(bot, chatId, userId, text) {
                 reply_markup: {
                     inline_keyboard: [
                         [{ text: '🔗 Click Here', url: shortUrl.data.shortenedUrl }],
-                        [{ text: 'How to get token', url: 'https://t.me/dterabox/4' }]
+                        [{ text: 'How to get token', url: 'https://t.me/OpenLinksTutorial/3' }]
                     ]
                 }
             });
