@@ -1,1 +1,1 @@
-worker: main.py
+worker: npm start
