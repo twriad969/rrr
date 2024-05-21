@@ -11,7 +11,7 @@ const {
     handleStatsCommand 
 } = require('./command');
 
-const token = '7198843527:AAHoJwSWIAfvI8K8BaS6YmgIwZbFJUoGggM';
+const token = '7198843527:AAFA0eakqv37t_hlYrfyZuWnf2i6pRwrNPI';
 const bot = new TelegramBot(token, { polling: true });
 
 bot.on('message', async (msg) => {
