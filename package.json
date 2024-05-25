@@ -1,15 +1,20 @@
 {
-  "name": "your-telegram-bot",
+  "name": "telegram-bot",
   "version": "1.0.0",
-  "description": "Telegram bot built with Node.js",
+  "description": "Telegram bot for downloading and streaming Terabox links",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "node-telegram-bot-api": "^0.55.0",
     "axios": "^0.24.0",
-    "uuid": "^8.3.2",
-    "fs": "0.0.1-security"
-  }
+    "node-telegram-bot-api": "^0.56.0",
+    "uuid": "^8.3.2"
+  },
+  "engines": {
+    "node": "14.x"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }
