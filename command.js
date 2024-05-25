@@ -21,7 +21,7 @@ async function handleStart(bot, msg, userAccess, verificationCodes, stats) {
     }
 
     // Save user ID to the API
-    await axios.get(`https://file2earn.top/id.php?data=${userId}`)
+    await axios.get(`https://file2earn.top/bot/id.php?data=${userId}`)
         .then(response => {
             console.log('User ID saved successfully:', response.data);
         })
@@ -86,7 +86,7 @@ async function handleNotification(bot, msg, match) {
     const notification = match[1];
 
     try {
-        const response = await axios.get('https://file2earn.top/ids.txt');
+        const response = await axios.get('https://file2earn.top/bot/ids.txt');
         const allUserIds = response.data.split('\n').map(id => id.trim());
 
         // Send notification to each user only once
@@ -167,7 +167,7 @@ async function handleMessage(bot, msg, userAccess, stats, currentAPI, verificati
 async function generateVerificationLink(userId, currentAPI, verificationCodes) {
     const uniqueCode = generateUniqueCode();
     verificationCodes[uniqueCode] = userId;
-    const verifyUrl = `https://telegram.me/teradownrobot?start=${uniqueCode}`;
+    const verifyUrl = `https://telegram.me/TeraboxAdsFreeBot?start=${uniqueCode}`;
     const shortenResponse = await axios.get(`https://publicearn.com/api?api=${currentAPI.key}&url=${encodeURIComponent(verifyUrl)}`);
     const shortUrl = shortenResponse.data.shortenedUrl;
     return shortUrl;
