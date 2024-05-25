@@ -118,7 +118,7 @@ async function handleMessage(bot, msg, userAccess, stats, currentAPI, verificati
                 reply_markup: {
                     inline_keyboard: [
                         [{ text: '✅ Click Here', url: verifyUrl }],
-                        [{ text: '❓ How to Bypass', url: 'https://t.me/dterabox/4' }]
+                        [{ text: '❓ How to Bypass', url: 'https://t.me/OpenLinksTutorial/3' }]
                     ]
                 }
             });
@@ -144,7 +144,7 @@ async function handleMessage(bot, msg, userAccess, stats, currentAPI, verificati
                 reply_markup: {
                     inline_keyboard: [
                         [{ text: '🎥 Click to See Video', url: directLink }],
-                        [{ text: '❓ How to Watch', url: 'https://t.me/dterabox/4' }]
+                        [{ text: '❓ How to Watch', url: 'https://t.me/dterabox/5' }]
                     ]
                 }
             });
