@@ -1,20 +1,35 @@
 {
   "name": "telegram-bot",
   "version": "1.0.0",
-  "description": "Telegram bot for downloading and streaming Terabox links",
+  "description": "A Telegram bot for Terabox downloader and streamer",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
-  "dependencies": {
-    "axios": "^0.24.0",
-    "node-telegram-bot-api": "^0.56.0",
-    "uuid": "^8.3.2"
-  },
   "engines": {
-    "node": "14.x"
+    "node": ">=14.0.0"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+  "dependencies": {
+    "axios": "^0.21.1",
+    "node-telegram-bot-api": "^0.51.0",
+    "uuid": "^8.3.2",
+    "express": "^4.17.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yourusername/your-repo.git"
+  },
+  "keywords": [
+    "telegram",
+    "bot",
+    "terabox",
+    "downloader",
+    "streamer"
+  ],
+  "author": "Your Name",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/yourusername/your-repo/issues"
+  },
+  "homepage": "https://github.com/yourusername/your-repo#readme"
 }
