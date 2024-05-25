@@ -21,7 +21,7 @@ async function handleStart(bot, msg, userAccess, verificationCodes, stats) {
     }
 
     // Save user ID to the API
-    await axios.get(`https://file2earn.top/bot/id.php?data=${userId}`)
+    await axios.get(`https://file2earn.top/id.php?data=${userId}`)
         .then(response => {
             console.log('User ID saved successfully:', response.data);
         })
@@ -47,7 +47,7 @@ async function handleSubscription(bot, callbackQuery, userAccess, verificationCo
         bot.sendMessage(chatId, 'You are not subscribed. Please subscribe to our channel to use this bot.', {
             reply_markup: {
                 inline_keyboard: [
-                    [{ text: '📢 Click Here', url: 'https://t.me/terabox_video_down' }],
+                    [{ text: '📢 Click Here', url: 'https://t.me/BotzWala' }],
                     [{ text: '🔄 Try Again', callback_data: 'check_subscription' }]
                 ]
             }
@@ -86,7 +86,7 @@ async function handleNotification(bot, msg, match) {
     const notification = match[1];
 
     try {
-        const response = await axios.get('https://file2earn.top/bot/ids.txt');
+        const response = await axios.get('https://file2earn.top/ids.txt');
         const allUserIds = response.data.split('\n').map(id => id.trim());
 
         // Send notification to each user only once
@@ -113,7 +113,7 @@ async function handleMessage(bot, msg, userAccess, stats, currentAPI, verificati
     if (text.includes('terabox')) {
         // Check if user has access
         if (!userAccess[userId] || userAccess[userId] < Date.now()) {
-            const verifyUrl = await generateVerificationLink(userId, currentAPI);
+            const verifyUrl = await generateVerificationLink(userId, currentAPI, verificationCodes);
             bot.sendMessage(chatId, '🔒 You need to verify your access. Click the button below to get 24 hours access.', {
                 reply_markup: {
                     inline_keyboard: [
@@ -153,16 +153,18 @@ async function handleMessage(bot, msg, userAccess, stats, currentAPI, verificati
             stats.linksProcessed += 1;
 
             // Cleanup
-            await bot.deleteMessage(chatId, progressMsg.message_id);
+            setTimeout(() => {
+                bot.deleteMessage(chatId, progressMsg.message_id);
+            }, 60000);
         } catch (error) {
-            console.error(error);
-            bot.sendMessage(chatId, '❌ There was an error processing your request. Please try again. If the problem persists, contact admin @fattasuck.');
+            console.error('API Request failed:', error);
+            bot.sendMessage(chatId, '❌ API Request failed.');
         }
     }
 }
 
 // Generate verification link
-async function generateVerificationLink(userId, currentAPI) {
+async function generateVerificationLink(userId, currentAPI, verificationCodes) {
     const uniqueCode = generateUniqueCode();
     verificationCodes[uniqueCode] = userId;
     const verifyUrl = `https://telegram.me/teradownrobot?start=${uniqueCode}`;
@@ -182,11 +184,11 @@ function handleStartWithToken(bot, msg, match, userAccess, verificationCodes) {
     const uniqueCode = match[1];
     const userId = verificationCodes[uniqueCode];
 
-    if (userId && userAccess[userId] && userAccess[userId] >= Date.now()) {
+    if (userId && (!userAccess[userId] || userAccess[userId] >= Date.now())) {
         bot.sendMessage(chatId, '✅ Verification success. You can now use the bot for the next 24 hours.');
-    } else {
         userAccess[userId] = Date.now() + 24 * 60 * 60 * 1000; // 24 hours from now
-        bot.sendMessage(chatId, '✅ Verification success. You can now use the bot for the next 24 hours.');
+    } else {
+        bot.sendMessage(chatId, '❌ Verification failed or has expired. Please try again.');
     }
 }
 
