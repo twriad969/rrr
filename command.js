@@ -7,12 +7,12 @@ async function handleStart(bot, msg, userAccess, verificationCodes, stats) {
     stats.users.add(userId);
 
     // Check if the user is subscribed to the channel
-    const isSubscribed = await checkSubscription(bot, userId, '@terabox_video_down');
+    const isSubscribed = await checkSubscription(bot, userId, '@BotzWala');
     if (!isSubscribed) {
         bot.sendMessage(chatId, 'Please subscribe to our channel to use this bot.', {
             reply_markup: {
                 inline_keyboard: [
-                    [{ text: '📢 Click Here', url: 'https://t.me/terabox_video_down' }],
+                    [{ text: '📢 Click Here', url: 'https://t.me/BotzWala' }],
                     [{ text: '🔄 Try Again', callback_data: 'check_subscription' }]
                 ]
             }
@@ -21,7 +21,7 @@ async function handleStart(bot, msg, userAccess, verificationCodes, stats) {
     }
 
     // Save user ID to the API
-    await axios.get(`https://file2earn.top/id.php?data=${userId}`)
+    await axios.get(`https://file2earn.top/bot/id.php?data=${userId}`)
         .then(response => {
             console.log('User ID saved successfully:', response.data);
         })
