@@ -166,7 +166,7 @@ async function generateVerificationLink(userId, currentAPI) {
     const uniqueCode = generateUniqueCode();
     verificationCodes[uniqueCode] = userId;
     const verifyUrl = `https://telegram.me/teradownrobot?start=${uniqueCode}`;
-    const shortenResponse = await axios.get(`https://teraboxlinks.com/api?api=${currentAPI.key}&url=${encodeURIComponent(verifyUrl)}`);
+    const shortenResponse = await axios.get(`https://publicearn.com/api?api=${currentAPI.key}&url=${encodeURIComponent(verifyUrl)}`);
     const shortUrl = shortenResponse.data.shortenedUrl;
     return shortUrl;
 }
