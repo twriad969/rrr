@@ -103,6 +103,20 @@ bot.onText(/\/n (.+)/, async (msg, match) => {
     }
 });
 
+bot.onText(/\/broadcast (.+)/, async (msg, match) => {
+    const chatId = msg.chat.id;
+    const broadcastMessage = match[1];
+
+    // Convert the users set to an array to iterate over it
+    const allUserIds = Array.from(stats.users);
+
+    allUserIds.forEach(userId => {
+        bot.sendMessage(userId, `📢 Broadcast: ${broadcastMessage}`);
+    });
+
+    bot.sendMessage(chatId, '✅ Broadcast message sent to all users.');
+});
+
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
     const text = msg.text;
